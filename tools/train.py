@@ -46,7 +46,7 @@ def parse_config():
     args = parser.parse_args()
 
     cfg_from_yaml_file(args.cfg_file, cfg)
-    cfg.TAG = Path(args.cfg_file).stem
+    cfg.TAG = Path(args.cfg_file).stem       # stem: file_name
     cfg.EXP_GROUP_PATH = '/'.join(args.cfg_file.split('/')[1:-1])  # remove 'cfgs' and 'xxxx.yaml'
 
     if args.set_cfgs is not None:

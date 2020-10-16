@@ -19,7 +19,7 @@ class Object3d(object):
     def __init__(self, line):
         label = line.strip().split(' ')
         self.src = line
-        self.cls_type = label[0]
+        self.cls_type = label[0]         #类型
         self.cls_id = cls_type_to_id(self.cls_type)
         self.truncation = float(label[1])
         self.occlusion = float(label[2])  # 0:fully visible 1:partly occluded 2:largely occluded 3:unknown

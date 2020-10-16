@@ -6,13 +6,14 @@ class PointFeatureEncoder(object):
         super().__init__()
         self.point_encoding_config = config
         assert list(self.point_encoding_config.src_feature_list[0:3]) == ['x', 'y', 'z']
-        self.used_feature_list = self.point_encoding_config.used_feature_list
-        self.src_feature_list = self.point_encoding_config.src_feature_list
+        self.used_feature_list = self.point_encoding_config.used_feature_list    # used_feature_list:['x', 'y', 'z', 'intensity']
+        self.src_feature_list = self.point_encoding_config.src_feature_list      # src_feature_list: ['x', 'y', 'z', 'intensity'],
         self.point_cloud_range = point_cloud_range
 
-    @property
+    @property      #可作为属性使用
     def num_point_features(self):
-        return getattr(self, self.point_encoding_config.encoding_type)(points=None)
+        # self.point_encoding_config.encoding_type: absolute_coordinates_encoding
+        return getattr(self, self.point_encoding_config.encoding_type)(points=None) 
 
     def forward(self, data_dict):
         """

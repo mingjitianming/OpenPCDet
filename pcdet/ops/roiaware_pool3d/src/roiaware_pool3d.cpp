@@ -124,7 +124,8 @@ inline void lidar_to_local_coords_cpu(float shift_x, float shift_y, float rot_an
     local_y = shift_x * sina + shift_y * cosa;
 }
 
-
+// 查看point是否在box中
+// local_x,local_y为当前point在box3d坐标系下的坐标
 inline int check_pt_in_box3d_cpu(const float *pt, const float *box3d, float &local_x, float &local_y){
     // param pt: (x, y, z)
     // param box3d: [x, y, z, dx, dy, dz, heading], (x, y, z) is the box center
@@ -140,6 +141,7 @@ inline int check_pt_in_box3d_cpu(const float *pt, const float *box3d, float &loc
 }
 
 
+// 计算在boxes中的points，并更新indices
 int points_in_boxes_cpu(at::Tensor boxes_tensor, at::Tensor pts_tensor, at::Tensor pts_indices_tensor){
     // params boxes: (N, 7) [x, y, z, dx, dy, dz, heading], (x, y, z) is the box center, each box DO NOT overlaps
     // params pts: (num_points, 3) [x, y, z]

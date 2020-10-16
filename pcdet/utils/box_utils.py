@@ -45,6 +45,7 @@ def boxes_to_corners_3d(boxes3d):
         [1, 1, 1], [1, -1, 1], [-1, -1, 1], [-1, 1, 1],
     )) / 2
 
+    # (N,8,3) * (1,8,3) -> (N,8,3)  element-wise的乘法。
     corners3d = boxes3d[:, None, 3:6].repeat(1, 8, 1) * template[None, :, :]
     corners3d = common_utils.rotate_points_along_z(corners3d.view(-1, 8, 3), boxes3d[:, 6]).view(-1, 8, 3)
     corners3d += boxes3d[:, None, 0:3]

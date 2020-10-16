@@ -9,6 +9,13 @@ from ...utils import box_utils, calibration_kitti, common_utils, object3d_kitti
 from ..dataset import DatasetTemplate
 
 
+# dataset = __all__[dataset_cfg.DATASET](
+#     dataset_cfg=dataset_cfg,
+#     class_names=class_names,
+#     root_path=root_path,
+#     training=training,
+#     logger=logger,
+# )
 class KittiDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         """
@@ -118,7 +125,13 @@ class KittiDataset(DatasetTemplate):
 
     def get_infos(self, num_workers=4, has_label=True, count_inside_pts=True, sample_id_list=None):
         import concurrent.futures as futures
-
+        '''
+         计算每一实例信息 info = { 'point_cloud'
+                                'image'
+                                'calib'
+                                'annos'
+                                'num_points_in_gt'}
+        '''
         def process_single_scene(sample_idx):
             print('%s sample_idx: %s' % (self.split, sample_idx))
             info = {}
@@ -139,7 +152,7 @@ class KittiDataset(DatasetTemplate):
             info['calib'] = calib_info
 
             if has_label:
-                obj_list = self.get_label(sample_idx)
+                obj_list = self.get_label(sample_idx)   # list[Object3d...]
                 annotations = {}
                 annotations['name'] = np.array([obj.cls_type for obj in obj_list])
                 annotations['truncated'] = np.array([obj.truncation for obj in obj_list])
@@ -156,15 +169,15 @@ class KittiDataset(DatasetTemplate):
                 num_gt = len(annotations['name'])
                 index = list(range(num_objects)) + [-1] * (num_gt - num_objects)
                 annotations['index'] = np.array(index, dtype=np.int32)
-
+                #! DontCare 在label中排在后面，故没有排序
                 loc = annotations['location'][:num_objects]
                 dims = annotations['dimensions'][:num_objects]
                 rots = annotations['rotation_y'][:num_objects]
-                loc_lidar = calib.rect_to_lidar(loc)
+                loc_lidar = calib.rect_to_lidar(loc)  #转换到lidar坐标系下
                 l, h, w = dims[:, 0:1], dims[:, 1:2], dims[:, 2:3]
-                loc_lidar[:, 2] += h[:, 0] / 2
+                loc_lidar[:, 2] += h[:, 0] / 2      #高度中心
                 gt_boxes_lidar = np.concatenate([loc_lidar, l, w, h, -(np.pi / 2 + rots[..., np.newaxis])], axis=1)
-                annotations['gt_boxes_lidar'] = gt_boxes_lidar
+                annotations['gt_boxes_lidar'] = gt_boxes_lidar    #ground truth
 
                 info['annos'] = annotations
 
@@ -173,8 +186,10 @@ class KittiDataset(DatasetTemplate):
                     calib = self.get_calib(sample_idx)
                     pts_rect = calib.lidar_to_rect(points[:, 0:3])
 
+                    #! 是否应该先转换到camera frame下
                     fov_flag = self.get_fov_flag(pts_rect, info['image']['image_shape'], calib)
                     pts_fov = points[fov_flag]
+                    # 计算boundingbox
                     corners_lidar = box_utils.boxes_to_corners_3d(gt_boxes_lidar)
                     num_points_in_gt = -np.ones(num_gt, dtype=np.int32)
 
@@ -200,7 +215,7 @@ class KittiDataset(DatasetTemplate):
         all_db_infos = {}
 
         with open(info_path, 'rb') as f:
-            infos = pickle.load(f)
+            infos = pickle.load(f)     #train_info
 
         for k in range(len(infos)):
             print('gt_database sample: %d/%d' % (k + 1, len(infos)))
@@ -214,6 +229,7 @@ class KittiDataset(DatasetTemplate):
             gt_boxes = annos['gt_boxes_lidar']
 
             num_obj = gt_boxes.shape[0]
+            #point_indices: (num_boxes, num_points)
             point_indices = roiaware_pool3d_utils.points_in_boxes_cpu(
                 torch.from_numpy(points[:, 0:3]), torch.from_numpy(gt_boxes)
             ).numpy()  # (nboxes, npoints)

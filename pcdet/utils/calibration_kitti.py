@@ -28,7 +28,7 @@ class Calibration(object):
             calib = calib_file
 
         self.P2 = calib['P2']  # 3 x 4
-        self.R0 = calib['R0']  # 3 x 3
+        self.R0 = calib['R0']  # 3 x 3   camera 的角度
         self.V2C = calib['Tr_velo2cam']  # 3 x 4
 
         # Camera intrinsics and extrinsics
@@ -47,6 +47,7 @@ class Calibration(object):
         pts_hom = np.hstack((pts, np.ones((pts.shape[0], 1), dtype=np.float32)))
         return pts_hom
 
+    # 将points变换到lidar frame下表示
     def rect_to_lidar(self, pts_rect):
         """
         :param pts_lidar: (N, 3)
@@ -77,7 +78,7 @@ class Calibration(object):
         :param pts_rect: (N, 3)
         :return pts_img: (N, 2)
         """
-        pts_rect_hom = self.cart_to_hom(pts_rect)
+        pts_rect_hom = self.cart_to_hom(pts_rect)   # (N, 4)
         pts_2d_hom = np.dot(pts_rect_hom, self.P2.T)
         pts_img = (pts_2d_hom[:, 0:2].T / pts_rect_hom[:, 2]).T  # (N, 2)
         pts_rect_depth = pts_2d_hom[:, 2] - self.P2.T[3, 2]  # depth in rect camera coord

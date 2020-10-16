@@ -52,7 +52,7 @@ def rotate_points_along_z(points, angle):
         zeros, zeros, ones
     ), dim=1).view(-1, 3, 3).float()
     points_rot = torch.matmul(points[:, :, 0:3], rot_matrix)
-    points_rot = torch.cat((points_rot, points[:, :, 3:]), dim=-1)
+    points_rot = torch.cat((points_rot, points[:, :, 3:]), dim=-1)   # 并入其他属性(如果有)
     return points_rot.numpy() if is_numpy else points_rot
 
 

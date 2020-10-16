@@ -38,6 +38,16 @@ class DistributedSampler(_DistributedSampler):
         return iter(indices)
 
 
+# train_set, train_loader, train_sampler = build_dataloader(
+#     dataset_cfg=cfg.DATA_CONFIG,
+#     class_names=cfg.CLASS_NAMES,
+#     batch_size=args.batch_size,
+#     dist=dist_train, workers=args.workers,
+#     logger=logger,
+#     training=True,
+#     merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
+#     total_epochs=args.epochs
+# )
 def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None, workers=4,
                      logger=None, training=True, merge_all_iters_to_one_epoch=False, total_epochs=0):
 
