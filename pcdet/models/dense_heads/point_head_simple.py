@@ -14,8 +14,8 @@ class PointHeadSimple(PointHeadTemplate):
         super().__init__(model_cfg=model_cfg, num_class=num_class)
         self.cls_layers = self.make_fc_layers(
             fc_cfg=self.model_cfg.CLS_FC,
-            input_channels=input_channels,
-            output_channels=num_class
+            input_channels=input_channels,      # 896
+            output_channels=num_class           # 
         )
 
     def assign_targets(self, input_dict):

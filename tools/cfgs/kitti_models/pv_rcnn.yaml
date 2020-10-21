@@ -32,7 +32,7 @@ DATA_CONFIG:
 MODEL:
     NAME: PVRCNN
 
-    VFE:
+    VFE:		# voxel feature encoding
         NAME: MeanVFE
 
     BACKBONE_3D:
@@ -58,7 +58,7 @@ MODEL:
         USE_DIRECTION_CLASSIFIER: True
         DIR_OFFSET: 0.78539
         DIR_LIMIT_OFFSET: 0.0
-        NUM_DIR_BINS: 2
+        NUM_DIR_BINS: 2    #direction
 
         ANCHOR_GENERATOR_CONFIG: [
             {
@@ -109,7 +109,7 @@ MODEL:
                 'code_weights': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
             }
 
-    PFE:
+    PFE:                          # point feature encoding
         NAME: VoxelSetAbstraction
         POINT_SOURCE: raw_points
         NUM_KEYPOINTS: 2048

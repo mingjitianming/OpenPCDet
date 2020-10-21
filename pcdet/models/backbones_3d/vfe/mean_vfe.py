@@ -3,7 +3,7 @@ import torch
 from .vfe_template import VFETemplate
 
 
-class MeanVFE(VFETemplate):
+class MeanVFE(VFETemplate):        # voxel feature encoding
     def __init__(self, model_cfg, num_point_features, **kwargs):
         super().__init__(model_cfg=model_cfg)
         self.num_point_features = num_point_features

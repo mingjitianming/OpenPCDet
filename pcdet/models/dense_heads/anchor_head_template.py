@@ -64,7 +64,7 @@ class AnchorHeadTemplate(nn.Module):
                 model_cfg=self.model_cfg,
                 class_names=self.class_names,
                 box_coder=self.box_coder,
-                match_height=anchor_target_cfg.MATCH_HEIGHT
+                match_height=anchor_target_cfg.MATCH_HEIGHT  #False
             )
         else:
             raise NotImplementedError

@@ -12,8 +12,8 @@ class AxisAlignedTargetAssigner(object):
         anchor_generator_cfg = model_cfg.ANCHOR_GENERATOR_CONFIG
         anchor_target_cfg = model_cfg.TARGET_ASSIGNER_CONFIG
         self.box_coder = box_coder
-        self.match_height = match_height
-        self.class_names = np.array(class_names)
+        self.match_height = match_height    #False
+        self.class_names = np.array(class_names)  # AxisAlignedTargetAssigner
         self.anchor_class_names = [config['class_name'] for config in anchor_generator_cfg]
         self.pos_fraction = anchor_target_cfg.POS_FRACTION if anchor_target_cfg.POS_FRACTION >= 0 else None
         self.sample_size = anchor_target_cfg.SAMPLE_SIZE

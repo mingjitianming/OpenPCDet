@@ -4,7 +4,7 @@ import torch.nn as nn
 
 
 class BaseBEVBackbone(nn.Module):
-    def __init__(self, model_cfg, input_channels):
+    def __init__(self, model_cfg, input_channels):  #256
         super().__init__()
         self.model_cfg = model_cfg
 
@@ -24,7 +24,7 @@ class BaseBEVBackbone(nn.Module):
             upsample_strides = num_upsample_filters = []
 
         num_levels = len(layer_nums)
-        c_in_list = [input_channels, *num_filters[:-1]]
+        c_in_list = [input_channels, *num_filters[:-1]]  # [256,128]
         self.blocks = nn.ModuleList()
         self.deblocks = nn.ModuleList()
         for idx in range(num_levels):
@@ -68,7 +68,7 @@ class BaseBEVBackbone(nn.Module):
                         nn.ReLU()
                     ))
 
-        c_in = sum(num_upsample_filters)
+        c_in = sum(num_upsample_filters)     #512
         if len(upsample_strides) > num_levels:
             self.deblocks.append(nn.Sequential(
                 nn.ConvTranspose2d(c_in, c_in, upsample_strides[-1], stride=upsample_strides[-1], bias=False),
@@ -76,7 +76,7 @@ class BaseBEVBackbone(nn.Module):
                 nn.ReLU(),
             ))
 
-        self.num_bev_features = c_in
+        self.num_bev_features = c_in   # 更新num_bev_features  512
 
     def forward(self, data_dict):
         """

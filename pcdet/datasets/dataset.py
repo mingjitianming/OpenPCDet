@@ -33,7 +33,7 @@ class DatasetTemplate(torch_data.Dataset):
         self.data_processor = DataProcessor(
             self.dataset_cfg.DATA_PROCESSOR, point_cloud_range=self.point_cloud_range, training=self.training
         )
-
+        # [0.05, 0.05, 0.1]
         self.grid_size = self.data_processor.grid_size
         self.voxel_size = self.data_processor.voxel_size
         self.total_epochs = 0

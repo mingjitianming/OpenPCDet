@@ -53,12 +53,13 @@ class VoxelSetAbstraction(nn.Module):
         self.SA_layers = nn.ModuleList()
         self.SA_layer_names = []
         self.downsample_times_map = {}
-        c_in = 0
+        c_in = 0   # 点p的特征维度   论文公式(4)
         for src_name in self.model_cfg.FEATURES_SOURCE:
             if src_name in ['bev', 'raw_points']:
                 continue
             self.downsample_times_map[src_name] = SA_cfg[src_name].DOWNSAMPLE_FACTOR
             mlps = SA_cfg[src_name].MLPS
+            # 增加1个维度[[16,16],[16,16]] -> [[16,16,16],[16,16,16]]
             for k in range(len(mlps)):
                 mlps[k] = [mlps[k][0]] + mlps[k]
             cur_layer = pointnet2_stack_modules.StackSAModuleMSG(
@@ -71,16 +72,16 @@ class VoxelSetAbstraction(nn.Module):
             self.SA_layers.append(cur_layer)
             self.SA_layer_names.append(src_name)
 
-            c_in += sum([x[-1] for x in mlps])
+            c_in += sum([x[-1] for x in mlps])           # 352
 
         if 'bev' in self.model_cfg.FEATURES_SOURCE:
-            c_bev = num_bev_features
-            c_in += c_bev
+            c_bev = num_bev_features    #512
+            c_in += c_bev               #864
 
         if 'raw_points' in self.model_cfg.FEATURES_SOURCE:
             mlps = SA_cfg['raw_points'].MLPS
             for k in range(len(mlps)):
-                mlps[k] = [num_rawpoint_features - 3] + mlps[k]
+                mlps[k] = [num_rawpoint_features - 3] + mlps[k]   # [[1,16,16],[1,16,16]]
 
             self.SA_rawpoints = pointnet2_stack_modules.StackSAModuleMSG(
                 radii=SA_cfg['raw_points'].POOL_RADIUS,
@@ -89,15 +90,15 @@ class VoxelSetAbstraction(nn.Module):
                 use_xyz=True,
                 pool_method='max_pool'
             )
-            c_in += sum([x[-1] for x in mlps])
+            c_in += sum([x[-1] for x in mlps])     # 896
 
         self.vsa_point_feature_fusion = nn.Sequential(
             nn.Linear(c_in, self.model_cfg.NUM_OUTPUT_FEATURES, bias=False),
             nn.BatchNorm1d(self.model_cfg.NUM_OUTPUT_FEATURES),
             nn.ReLU(),
         )
-        self.num_point_features = self.model_cfg.NUM_OUTPUT_FEATURES
-        self.num_point_features_before_fusion = c_in
+        self.num_point_features = self.model_cfg.NUM_OUTPUT_FEATURES        #128
+        self.num_point_features_before_fusion = c_in      # 896  ??对么??
 
     def interpolate_from_bev_features(self, keypoints, bev_features, batch_size, bev_stride):
         x_idxs = (keypoints[:, :, 0] - self.point_cloud_range[0]) / self.voxel_size[0]

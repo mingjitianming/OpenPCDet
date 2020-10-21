@@ -14,11 +14,12 @@ class Detector3DTemplate(nn.Module):
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__()
         self.model_cfg = model_cfg
-        self.num_class = num_class
+        self.num_class = num_class    # 3
         self.dataset = dataset
         self.class_names = dataset.class_names
         self.register_buffer('global_step', torch.LongTensor(1).zero_())
 
+        # vfe: voxel feature encoding
         self.module_topology = [
             'vfe', 'backbone_3d', 'map_to_bev_module', 'pfe',
             'backbone_2d', 'dense_head',  'point_head', 'roi_head'
@@ -34,7 +35,7 @@ class Detector3DTemplate(nn.Module):
     def build_networks(self):
         model_info_dict = {
             'module_list': [],
-            # ['x', 'y', 'z', 'intensity']
+            # 4 <- len(['x', 'y', 'z', 'intensity'])
             'num_rawpoint_features': self.dataset.point_feature_encoder.num_point_features,
             'num_point_features': self.dataset.point_feature_encoder.num_point_features,
             'grid_size': self.dataset.grid_size,
@@ -48,7 +49,7 @@ class Detector3DTemplate(nn.Module):
             self.add_module(module_name, module)
         return model_info_dict['module_list']
 
-    def build_vfe(self, model_info_dict):
+    def build_vfe(self, model_info_dict):     # vfe: voxel feature encoding
         if self.model_cfg.get('VFE', None) is None:
             return None, model_info_dict
 
@@ -74,7 +75,7 @@ class Detector3DTemplate(nn.Module):
             point_cloud_range=model_info_dict['point_cloud_range']
         )
         model_info_dict['module_list'].append(backbone_3d_module)
-        model_info_dict['num_point_features'] = backbone_3d_module.num_point_features
+        model_info_dict['num_point_features'] = backbone_3d_module.num_point_features     # 128
         return backbone_3d_module, model_info_dict
 
     def build_map_to_bev_module(self, model_info_dict):
@@ -86,7 +87,7 @@ class Detector3DTemplate(nn.Module):
             grid_size=model_info_dict['grid_size']
         )
         model_info_dict['module_list'].append(map_to_bev_module)
-        model_info_dict['num_bev_features'] = map_to_bev_module.num_bev_features
+        model_info_dict['num_bev_features'] = map_to_bev_module.num_bev_features  #256
         return map_to_bev_module, model_info_dict
 
     def build_backbone_2d(self, model_info_dict):
@@ -98,7 +99,7 @@ class Detector3DTemplate(nn.Module):
             input_channels=model_info_dict['num_bev_features']
         )
         model_info_dict['module_list'].append(backbone_2d_module)
-        model_info_dict['num_bev_features'] = backbone_2d_module.num_bev_features
+        model_info_dict['num_bev_features'] = backbone_2d_module.num_bev_features   #512
         return backbone_2d_module, model_info_dict
 
     def build_pfe(self, model_info_dict):
@@ -109,12 +110,12 @@ class Detector3DTemplate(nn.Module):
             model_cfg=self.model_cfg.PFE,
             voxel_size=model_info_dict['voxel_size'],
             point_cloud_range=model_info_dict['point_cloud_range'],
-            num_bev_features=model_info_dict['num_bev_features'],
-            num_rawpoint_features=model_info_dict['num_rawpoint_features']
+            num_bev_features=model_info_dict['num_bev_features'],   #512
+            num_rawpoint_features=model_info_dict['num_rawpoint_features']   # 4
         )
         model_info_dict['module_list'].append(pfe_module)
-        model_info_dict['num_point_features'] = pfe_module.num_point_features
-        model_info_dict['num_point_features_before_fusion'] = pfe_module.num_point_features_before_fusion
+        model_info_dict['num_point_features'] = pfe_module.num_point_features    # 128
+        model_info_dict['num_point_features_before_fusion'] = pfe_module.num_point_features_before_fusion   # 896
         return pfe_module, model_info_dict
 
     def build_dense_head(self, model_info_dict):
@@ -137,9 +138,9 @@ class Detector3DTemplate(nn.Module):
             return None, model_info_dict
 
         if self.model_cfg.POINT_HEAD.get('USE_POINT_FEATURES_BEFORE_FUSION', False):
-            num_point_features = model_info_dict['num_point_features_before_fusion']
+            num_point_features = model_info_dict['num_point_features_before_fusion']   #896
         else:
-            num_point_features = model_info_dict['num_point_features']
+            num_point_features = model_info_dict['num_point_features']   # 128
 
         point_head_module = dense_heads.__all__[self.model_cfg.POINT_HEAD.NAME](
             model_cfg=self.model_cfg.POINT_HEAD,
@@ -207,7 +208,8 @@ class Detector3DTemplate(nn.Module):
                 if not batch_dict['cls_preds_normalized']:
                     cls_preds = torch.sigmoid(cls_preds)
             else:
-                cls_preds = [x[batch_mask] for x in batch_dict['batch_cls_preds']]
+                cls_preds = [x[batch_mask]
+                             for x in batch_dict['batch_cls_preds']]
                 src_cls_preds = cls_preds
                 if not batch_dict['cls_preds_normalized']:
                     cls_preds = [torch.sigmoid(x) for x in cls_preds]
@@ -215,7 +217,8 @@ class Detector3DTemplate(nn.Module):
             if post_process_cfg.NMS_CONFIG.MULTI_CLASSES_NMS:
                 if not isinstance(cls_preds, list):
                     cls_preds = [cls_preds]
-                    multihead_label_mapping = [torch.arange(1, self.num_class, device=cls_preds[0].device)]
+                    multihead_label_mapping = [torch.arange(
+                        1, self.num_class, device=cls_preds[0].device)]
                 else:
                     multihead_label_mapping = batch_dict['multihead_label_mapping']
 
@@ -223,7 +226,8 @@ class Detector3DTemplate(nn.Module):
                 pred_scores, pred_labels, pred_boxes = [], [], []
                 for cur_cls_preds, cur_label_mapping in zip(cls_preds, multihead_label_mapping):
                     assert cur_cls_preds.shape[1] == len(cur_label_mapping)
-                    cur_box_preds = box_preds[cur_start_idx: cur_start_idx + cur_cls_preds.shape[0]]
+                    cur_box_preds = box_preds[cur_start_idx:
+                                              cur_start_idx + cur_cls_preds.shape[0]]
                     cur_pred_scores, cur_pred_labels, cur_pred_boxes = model_nms_utils.multi_classes_nms(
                         cls_scores=cur_cls_preds, box_preds=cur_box_preds,
                         nms_config=post_process_cfg.NMS_CONFIG,
@@ -296,21 +300,25 @@ class Detector3DTemplate(nn.Module):
 
         if cur_gt.shape[0] > 0:
             if box_preds.shape[0] > 0:
-                iou3d_rcnn = iou3d_nms_utils.boxes_iou3d_gpu(box_preds[:, 0:7], cur_gt[:, 0:7])
+                iou3d_rcnn = iou3d_nms_utils.boxes_iou3d_gpu(
+                    box_preds[:, 0:7], cur_gt[:, 0:7])
             else:
                 iou3d_rcnn = torch.zeros((0, cur_gt.shape[0]))
 
             if rois is not None:
-                iou3d_roi = iou3d_nms_utils.boxes_iou3d_gpu(rois[:, 0:7], cur_gt[:, 0:7])
+                iou3d_roi = iou3d_nms_utils.boxes_iou3d_gpu(
+                    rois[:, 0:7], cur_gt[:, 0:7])
 
             for cur_thresh in thresh_list:
                 if iou3d_rcnn.shape[0] == 0:
                     recall_dict['rcnn_%s' % str(cur_thresh)] += 0
                 else:
-                    rcnn_recalled = (iou3d_rcnn.max(dim=0)[0] > cur_thresh).sum().item()
+                    rcnn_recalled = (iou3d_rcnn.max(dim=0)[
+                                     0] > cur_thresh).sum().item()
                     recall_dict['rcnn_%s' % str(cur_thresh)] += rcnn_recalled
                 if rois is not None:
-                    roi_recalled = (iou3d_roi.max(dim=0)[0] > cur_thresh).sum().item()
+                    roi_recalled = (iou3d_roi.max(dim=0)[
+                                    0] > cur_thresh).sum().item()
                     recall_dict['roi_%s' % str(cur_thresh)] += roi_recalled
 
             recall_dict['gt'] += cur_gt.shape[0]
@@ -322,13 +330,15 @@ class Detector3DTemplate(nn.Module):
         if not os.path.isfile(filename):
             raise FileNotFoundError
 
-        logger.info('==> Loading parameters from checkpoint %s to %s' % (filename, 'CPU' if to_cpu else 'GPU'))
+        logger.info('==> Loading parameters from checkpoint %s to %s' %
+                    (filename, 'CPU' if to_cpu else 'GPU'))
         loc_type = torch.device('cpu') if to_cpu else None
         checkpoint = torch.load(filename, map_location=loc_type)
         model_state_disk = checkpoint['model_state']
 
         if 'version' in checkpoint:
-            logger.info('==> Checkpoint trained from version: %s' % checkpoint['version'])
+            logger.info('==> Checkpoint trained from version: %s' %
+                        checkpoint['version'])
 
         update_model_state = {}
         for key, val in model_state_disk.items():
@@ -342,15 +352,18 @@ class Detector3DTemplate(nn.Module):
 
         for key in state_dict:
             if key not in update_model_state:
-                logger.info('Not updated weight %s: %s' % (key, str(state_dict[key].shape)))
+                logger.info('Not updated weight %s: %s' %
+                            (key, str(state_dict[key].shape)))
 
-        logger.info('==> Done (loaded %d/%d)' % (len(update_model_state), len(self.state_dict())))
+        logger.info('==> Done (loaded %d/%d)' %
+                    (len(update_model_state), len(self.state_dict())))
 
     def load_params_with_optimizer(self, filename, to_cpu=False, optimizer=None, logger=None):
         if not os.path.isfile(filename):
             raise FileNotFoundError
 
-        logger.info('==> Loading parameters from checkpoint %s to %s' % (filename, 'CPU' if to_cpu else 'GPU'))
+        logger.info('==> Loading parameters from checkpoint %s to %s' %
+                    (filename, 'CPU' if to_cpu else 'GPU'))
         loc_type = torch.device('cpu') if to_cpu else None
         checkpoint = torch.load(filename, map_location=loc_type)
         epoch = checkpoint.get('epoch', -1)
@@ -368,11 +381,14 @@ class Detector3DTemplate(nn.Module):
                 src_file, ext = filename[:-4], filename[-3:]
                 optimizer_filename = '%s_optim.%s' % (src_file, ext)
                 if os.path.exists(optimizer_filename):
-                    optimizer_ckpt = torch.load(optimizer_filename, map_location=loc_type)
-                    optimizer.load_state_dict(optimizer_ckpt['optimizer_state'])
+                    optimizer_ckpt = torch.load(
+                        optimizer_filename, map_location=loc_type)
+                    optimizer.load_state_dict(
+                        optimizer_ckpt['optimizer_state'])
 
         if 'version' in checkpoint:
-            print('==> Checkpoint trained from version: %s' % checkpoint['version'])
+            print('==> Checkpoint trained from version: %s' %
+                  checkpoint['version'])
         logger.info('==> Done')
 
         return it, epoch

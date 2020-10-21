@@ -7,7 +7,7 @@ class VFETemplate(nn.Module):
         self.model_cfg = model_cfg
 
     def get_output_feature_dim(self):
-        raise NotImplementedError
+        raise NotImplementedError 
 
     def forward(self, **kwargs):
         """
