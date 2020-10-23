@@ -24,6 +24,7 @@ class DataAugmentor(object):
             self.data_augmentor_queue.append(cur_augmentor)
 
     def gt_sampling(self, config=None):
+        # 对database info 数据进行采样过滤
         db_sampler = database_sampler.DataBaseSampler(
             root_path=self.root_path,
             sampler_cfg=config,
@@ -89,8 +90,9 @@ class DataAugmentor(object):
 
         Returns:
         """
-        for cur_augmentor in self.data_augmentor_queue:
-            data_dict = cur_augmentor(data_dict=data_dict)
+        # 增广数据
+        for cur_augmentor in self.data_augmentor_queue:    # [gt_sampling()]
+            data_dict = cur_augmentor(data_dict=data_dict)    # 调用 DataBaseSampler.__call__()
 
         data_dict['gt_boxes'][:, 6] = common_utils.limit_period(
             data_dict['gt_boxes'][:, 6], offset=0.5, period=2 * np.pi

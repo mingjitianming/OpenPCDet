@@ -126,9 +126,9 @@ class KittiDataset(DatasetTemplate):
     def get_infos(self, num_workers=4, has_label=True, count_inside_pts=True, sample_id_list=None):
         import concurrent.futures as futures
         '''
-         计算每一实例信息 info = { 'point_cloud'
-                                'image'
-                                'calib'
+         计算每一实例信息 info = { 'point_cloud': {'num_features': 4, 'lidar_idx': sample_idx}
+                                'image' :      {'image_idx': sample_idx, 'image_shape': self.get_image_shape(sample_idx)}
+                                'calib'  :     {'P2': P2, 'R0_rect': R0_4x4, 'Tr_velo_to_cam': V2C_4x4}
                                 'annos'
                                 'num_points_in_gt'}
         '''
@@ -158,8 +158,8 @@ class KittiDataset(DatasetTemplate):
                 annotations['truncated'] = np.array([obj.truncation for obj in obj_list])
                 annotations['occluded'] = np.array([obj.occlusion for obj in obj_list])
                 annotations['alpha'] = np.array([obj.alpha for obj in obj_list])
-                annotations['bbox'] = np.concatenate([obj.box2d.reshape(1, 4) for obj in obj_list], axis=0)
-                annotations['dimensions'] = np.array([[obj.l, obj.h, obj.w] for obj in obj_list])  # lhw(camera) format
+                annotations['bbox'] = np.concatenate([obj.box2d.reshape(1, 4) for obj in obj_list], axis=0)  #(camera) format
+                annotations['dimensions'] = np.array([[obj.l, obj.h, obj.w] for obj in obj_list])  # lhw
                 annotations['location'] = np.concatenate([obj.loc.reshape(1, 3) for obj in obj_list], axis=0)
                 annotations['rotation_y'] = np.array([obj.ry for obj in obj_list])
                 annotations['score'] = np.array([obj.score for obj in obj_list])
@@ -353,6 +353,16 @@ class KittiDataset(DatasetTemplate):
 
         return len(self.kitti_infos)
 
+
+    '''
+    data_dict:
+    frame_id: string
+    points: (N, 3 + C_in)
+    gt_boxes: optional, (N, 7 + C)[x, y, z, dx, dy, dz, heading, ...]
+    gt_names: optional, (N), string
+    use_lead_xyz: bool
+    'image_shape':
+    '''
     def __getitem__(self, index):
         # index = 4
         if self._merge_all_iters_to_one_epoch:
@@ -382,7 +392,7 @@ class KittiDataset(DatasetTemplate):
             annos = common_utils.drop_info_with_name(annos, name='DontCare')
             loc, dims, rots = annos['location'], annos['dimensions'], annos['rotation_y']
             gt_names = annos['name']
-            gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)
+            gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)    #shape:[n x 7]
             gt_boxes_lidar = box_utils.boxes3d_kitti_camera_to_lidar(gt_boxes_camera, calib)
 
             input_dict.update({

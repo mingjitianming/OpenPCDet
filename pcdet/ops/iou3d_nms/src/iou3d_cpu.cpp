@@ -60,6 +60,7 @@ inline float cross(const Point &a, const Point &b){
     return a.x * b.y - a.y * b.x;
 }
 
+// 二维向量叉乘，返回值为float
 inline float cross(const Point &p1, const Point &p2, const Point &p0){
     return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
 }
@@ -89,6 +90,7 @@ inline int intersection(const Point &p1, const Point &p0, const Point &q1, const
     if (check_rect_cross(p0, p1, q0, q1) == 0) return 0;
 
     // check cross standing
+    // 判断一条线的两个点在另一条线的左侧还是右侧，若在同一侧则不相交
     float s1 = cross(q0, p1, p0);
     float s2 = cross(p1, q1, p0);
     float s3 = cross(p0, q1, q0);
@@ -98,7 +100,8 @@ inline int intersection(const Point &p1, const Point &p0, const Point &q1, const
 
     // calculate intersection of two lines
     float s5 = cross(q1, p1, p0);
-    if(fabs(s5 - s1) > EPS){
+    // s5 - s1 的结果为两条线段的点积
+    if(fabs(s5 - s1) > EPS){   // 夹角小于90
         ans.x = (s5 * q0.x - s1 * q1.x) / (s5 - s1);
         ans.y = (s5 * q0.y - s1 * q1.y) / (s5 - s1);
 
@@ -129,8 +132,6 @@ inline float box_overlap(const float *box_a, const float *box_b){
     // params: box_a (7) [x, y, z, dx, dy, dz, heading]
     // params: box_b (7) [x, y, z, dx, dy, dz, heading]
 
-//    float a_x1 = box_a[0], a_y1 = box_a[1], a_x2 = box_a[2], a_y2 = box_a[3], a_angle = box_a[4];
-//    float b_x1 = box_b[0], b_y1 = box_b[1], b_x2 = box_b[2], b_y2 = box_b[3], b_angle = box_b[4];
     float a_angle = box_a[6], b_angle = box_b[6];
     float a_dx_half = box_a[3] / 2, b_dx_half = box_b[3] / 2, a_dy_half = box_a[4] / 2, b_dy_half = box_b[4] / 2;
     float a_x1 = box_a[0] - a_dx_half, a_y1 = box_a[1] - a_dy_half;

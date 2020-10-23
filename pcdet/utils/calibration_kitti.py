@@ -63,12 +63,13 @@ class Calibration(object):
         pts_lidar = np.dot(pts_rect_hom, np.linalg.inv(np.dot(R0_ext, V2C_ext).T))
         return pts_lidar[:, 0:3]
 
+    # lidar到相机的变换
     def lidar_to_rect(self, pts_lidar):
         """
         :param pts_lidar: (N, 3)
         :return pts_rect: (N, 3)
         """
-        pts_lidar_hom = self.cart_to_hom(pts_lidar)
+        pts_lidar_hom = self.cart_to_hom(pts_lidar)   # 增加1维
         pts_rect = np.dot(pts_lidar_hom, np.dot(self.V2C.T, self.R0.T))
         # pts_rect = reduce(np.dot, (pts_lidar_hom, self.V2C.T, self.R0.T))
         return pts_rect

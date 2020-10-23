@@ -72,6 +72,7 @@ def mask_boxes_outside_range_numpy(boxes, limit_range, min_num_corners=1):
     return mask
 
 
+# 移除不在boxes中的points
 def remove_points_in_boxes3d(points, boxes3d):
     """
     Args:
@@ -83,7 +84,9 @@ def remove_points_in_boxes3d(points, boxes3d):
     """
     boxes3d, is_numpy = common_utils.check_numpy_to_torch(boxes3d)
     points, is_numpy = common_utils.check_numpy_to_torch(points)
+    # point_masks:[num_boxes,num_points]
     point_masks = roiaware_pool3d_utils.points_in_boxes_cpu(points[:, 0:3], boxes3d)
+    #获取不在任何boxes中的points
     points = points[point_masks.sum(dim=0) == 0]
 
     return points.numpy() if is_numpy else points

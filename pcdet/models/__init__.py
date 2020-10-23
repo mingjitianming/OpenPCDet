@@ -12,7 +12,7 @@ def build_network(model_cfg, num_class, dataset):
     )
     return model
 
-
+#XXX: 去除了点云无关的数据
 def load_data_to_gpu(batch_dict):
     for key, val in batch_dict.items():
         if not isinstance(val, np.ndarray):

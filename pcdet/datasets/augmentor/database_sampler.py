@@ -22,7 +22,11 @@ class DataBaseSampler(object):
                 infos = pickle.load(f)
                 [self.db_infos[cur_class].extend(infos[cur_class]) for cur_class in class_names]
 
-        for func_name, val in sampler_cfg.PREPARE.items():
+        # PREPARE: {
+        #      filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+        #      filter_by_difficulty: [-1],
+        #   }
+        for func_name, val in sampler_cfg.PREPARE.items():     # 对数据进行过滤
             self.db_infos = getattr(self, func_name)(self.db_infos, val)
 
         self.sample_groups = {}
@@ -108,7 +112,7 @@ class DataBaseSampler(object):
         """
         a, b, c, d = road_planes
         center_cam = calib.lidar_to_rect(gt_boxes[:, 0:3])
-        cur_height_cam = (-d - a * center_cam[:, 0] - c * center_cam[:, 2]) / b
+        cur_height_cam = (-d - a * center_cam[:, 0] - c * center_cam[:, 2]) / b   # 相机y方向高度
         center_cam[:, 1] = cur_height_cam
         cur_lidar_height = calib.rect_to_lidar(center_cam)[:, 2]
         mv_height = gt_boxes[:, 2] - gt_boxes[:, 5] / 2 - cur_lidar_height
@@ -131,8 +135,9 @@ class DataBaseSampler(object):
         for idx, info in enumerate(total_valid_sampled_dict):
             file_path = self.root_path / info['path']
             obj_points = np.fromfile(str(file_path), dtype=np.float32).reshape(
-                [-1, self.sampler_cfg.NUM_POINT_FEATURES])
+                [-1, self.sampler_cfg.NUM_POINT_FEATURES]) #[1,4]
 
+            # 将points变换到全局(lidar)坐标下
             obj_points[:, :3] += info['box3d_lidar'][:3]
 
             if self.sampler_cfg.get('USE_ROAD_PLANE', False):
@@ -147,6 +152,7 @@ class DataBaseSampler(object):
         large_sampled_gt_boxes = box_utils.enlarge_box3d(
             sampled_gt_boxes[:, 0:7], extra_width=self.sampler_cfg.REMOVE_EXTRA_WIDTH
         )
+        # 移除输入数据points中在采样boxes中的points
         points = box_utils.remove_points_in_boxes3d(points, large_sampled_gt_boxes)
         points = np.concatenate([obj_points, points], axis=0)
         gt_names = np.concatenate([gt_names, sampled_gt_names], axis=0)
@@ -156,11 +162,17 @@ class DataBaseSampler(object):
         data_dict['points'] = points
         return data_dict
 
+    # 1. 若传入数据某个类别数量少于sample_groups中定义的数量，则在数据库中进行采样
+    # 2. 计算采用数据之间及采样数据与输入数据的iou
+    # 3. 取出与其他采样数据、输入数据独立的采样数据，作为有效采样
+    # 4. 将有效采样数据加入到场景中
     def __call__(self, data_dict):
         """
         Args:
             data_dict:
                 gt_boxes: (N, 7 + C) [x, y, z, dx, dy, dz, heading, ...]
+                gt_boxes_mask： list(N)  [True,False...]
+                gt_names: optional, (N), string
 
         Returns:
 
@@ -171,20 +183,26 @@ class DataBaseSampler(object):
         total_valid_sampled_dict = []
         for class_name, sample_group in self.sample_groups.items():
             if self.limit_whole_scene:
-                num_gt = np.sum(class_name == gt_names)
+                num_gt = np.sum(class_name == gt_names)    # 在当前样本中 class_name 类的数量
+                # 一个group中应包含sample_num个，现有num_gt个，应再采样(sample_class_num[class_name] - num_gt)个
                 sample_group['sample_num'] = str(int(self.sample_class_num[class_name]) - num_gt)
+            # 1. 若传入数据某个类别数量少于sample_groups中定义的数量，则在数据库中进行采样
             if int(sample_group['sample_num']) > 0:
-                sampled_dict = self.sample_with_fixed_number(class_name, sample_group)
+                sampled_dict = self.sample_with_fixed_number(class_name, sample_group)  # 采样数据，使样本数量达到sample_class_num[class_name]
 
                 sampled_boxes = np.stack([x['box3d_lidar'] for x in sampled_dict], axis=0).astype(np.float32)
 
                 if self.sampler_cfg.get('DATABASE_WITH_FAKELIDAR', False):
                     sampled_boxes = box_utils.boxes3d_kitti_fakelidar_to_lidar(sampled_boxes)
 
+                # 2. 计算采用数据之间及采样数据与输入数据的iou
+                # 计算iou，交集/并集
                 iou1 = iou3d_nms_utils.boxes_bev_iou_cpu(sampled_boxes[:, 0:7], existed_boxes[:, 0:7])
                 iou2 = iou3d_nms_utils.boxes_bev_iou_cpu(sampled_boxes[:, 0:7], sampled_boxes[:, 0:7])
-                iou2[range(sampled_boxes.shape[0]), range(sampled_boxes.shape[0])] = 0
+                # 3. 取出与其他采样数据、输入数据独立的采样数据，作为有效采样
+                iou2[range(sampled_boxes.shape[0]), range(sampled_boxes.shape[0])] = 0   # 对角线取0
                 iou1 = iou1 if iou1.shape[1] > 0 else iou2
+                # 取出不相交的boxes: 如两个box有重叠则iou大于0，没有重叠则等于0
                 valid_mask = ((iou1.max(axis=1) + iou2.max(axis=1)) == 0).nonzero()[0]
                 valid_sampled_dict = [sampled_dict[x] for x in valid_mask]
                 valid_sampled_boxes = sampled_boxes[valid_mask]
@@ -193,6 +211,7 @@ class DataBaseSampler(object):
                 total_valid_sampled_dict.extend(valid_sampled_dict)
 
         sampled_gt_boxes = existed_boxes[gt_boxes.shape[0]:, :]
+        # 4. 将有效采样数据加入到场景中
         if total_valid_sampled_dict.__len__() > 0:
             data_dict = self.add_sampled_boxes_to_scene(data_dict, sampled_gt_boxes, total_valid_sampled_dict)
 

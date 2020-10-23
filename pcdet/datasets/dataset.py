@@ -118,6 +118,7 @@ class DatasetTemplate(torch_data.Dataset):
             assert 'gt_boxes' in data_dict, 'gt_boxes should be provided for training'
             gt_boxes_mask = np.array([n in self.class_names for n in data_dict['gt_names']], dtype=np.bool_)
 
+            # 从数据库中采样实施数据增广
             data_dict = self.data_augmentor.forward(
                 data_dict={
                     **data_dict,
