@@ -23,7 +23,7 @@ def in_hull(p, hull):
 
     return flag
 
-
+# 计算boxes的角点
 def boxes_to_corners_3d(boxes3d):
     """
         7 -------- 4
@@ -46,13 +46,17 @@ def boxes_to_corners_3d(boxes3d):
     )) / 2
 
     # (N,8,3) * (1,8,3) -> (N,8,3)  element-wise的乘法。
-    corners3d = boxes3d[:, None, 3:6].repeat(1, 8, 1) * template[None, :, :]
+    corners3d = boxes3d[:, None, 3:6].repeat(1, 8, 1) * template[None, :, :] # 计算box的8个角点
     corners3d = common_utils.rotate_points_along_z(corners3d.view(-1, 8, 3), boxes3d[:, 6]).view(-1, 8, 3)
     corners3d += boxes3d[:, None, 0:3]
 
     return corners3d.numpy() if is_numpy else corners3d
 
 
+# mask = box_utils.mask_boxes_outside_range_numpy(
+#     data_dict['gt_boxes'], self.point_cloud_range, min_num_corners=config.get(
+#         'min_num_corners', 1)
+# )
 def mask_boxes_outside_range_numpy(boxes, limit_range, min_num_corners=1):
     """
     Args:
@@ -66,7 +70,8 @@ def mask_boxes_outside_range_numpy(boxes, limit_range, min_num_corners=1):
     if boxes.shape[1] > 7:
         boxes = boxes[:, 0:7]
     corners = boxes_to_corners_3d(boxes)  # (N, 8, 3)
-    mask = ((corners >= limit_range[0:3]) & (corners <= limit_range[3:6])).all(axis=2)
+    # 在rang中的corners
+    mask = ((corners >= limit_range[0:3]) & (corners <= limit_range[3:6])).all(axis=2)   # (N,8,1)
     mask = mask.sum(axis=1) >= min_num_corners  # (N)
 
     return mask

@@ -93,6 +93,11 @@ class DatasetTemplate(torch_data.Dataset):
         """
         raise NotImplementedError
 
+    # 1. 进行数据增广
+    # 2. 确定points特征编码
+    # 3. 进行数据处理：a. 去除range外的point和boxes
+    #                b. points随机排序
+    #                c. 变化到voxels
     def prepare_data(self, data_dict):
         """
         Args:
@@ -135,13 +140,24 @@ class DatasetTemplate(torch_data.Dataset):
             data_dict['gt_names'] = data_dict['gt_names'][selected]
             gt_classes = np.array([self.class_names.index(n) + 1 for n in data_dict['gt_names']], dtype=np.int32)
             gt_boxes = np.concatenate((data_dict['gt_boxes'], gt_classes.reshape(-1, 1).astype(np.float32)), axis=1)
-            data_dict['gt_boxes'] = gt_boxes
+            data_dict['gt_boxes'] = gt_boxes     # 添加类别
 
-        data_dict = self.point_feature_encoder.forward(data_dict)
+        data_dict = self.point_feature_encoder.forward(data_dict) # point: ['x', 'y', 'z', 'intensity']
 
+        # 进行数据随机打乱，投影到voxels
+        '''
+        data_dict:
+                points: (N, 3 + C_in)
+                gt_boxes: optional, (N, 7 + C) [x, y, z, dx, dy, dz, heading, ...]
+                gt_names: optional, (N), string
+                'voxels': voxels
+                'voxel_coords': coordinates
+                'voxel_num_points': num_points
+        '''
         data_dict = self.data_processor.forward(
             data_dict=data_dict
         )
+        # 类别已经合并到 gt_boxes 中
         data_dict.pop('gt_names', None)
 
         return data_dict

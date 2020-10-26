@@ -19,7 +19,7 @@ class PointFeatureEncoder(object):
         """
         Args:
             data_dict:
-                points: (N, 3 + C_in)
+                points: (N, 3 + C_in)   （N,['x', 'y', 'z', 'intensity']）
                 ...
         Returns:
             data_dict:
@@ -27,6 +27,7 @@ class PointFeatureEncoder(object):
                 use_lead_xyz: whether to use xyz as point-wise features
                 ...
         """
+        # encoding_type: absolute_coordinates_encoding
         data_dict['points'], use_lead_xyz = getattr(self, self.point_encoding_config.encoding_type)(
             data_dict['points']
         )
