@@ -55,6 +55,7 @@ class Detector3DTemplate(nn.Module):
 
         vfe_module = vfe.__all__[self.model_cfg.VFE.NAME](
             model_cfg=self.model_cfg.VFE,
+            # 4 <- len(['x', 'y', 'z', 'intensity'])
             num_point_features=model_info_dict['num_rawpoint_features'],
             point_cloud_range=model_info_dict['point_cloud_range'],
             voxel_size=model_info_dict['voxel_size']
@@ -69,6 +70,7 @@ class Detector3DTemplate(nn.Module):
 
         backbone_3d_module = backbones_3d.__all__[self.model_cfg.BACKBONE_3D.NAME](
             model_cfg=self.model_cfg.BACKBONE_3D,
+            # 4 <- len(['x', 'y', 'z', 'intensity'])
             input_channels=model_info_dict['num_point_features'],
             grid_size=model_info_dict['grid_size'],
             voxel_size=model_info_dict['voxel_size'],
@@ -102,7 +104,7 @@ class Detector3DTemplate(nn.Module):
         model_info_dict['num_bev_features'] = backbone_2d_module.num_bev_features   #512
         return backbone_2d_module, model_info_dict
 
-    def build_pfe(self, model_info_dict):
+    def build_pfe(self, model_info_dict):    # point feature encodeing
         if self.model_cfg.get('PFE', None) is None:
             return None, model_info_dict
 

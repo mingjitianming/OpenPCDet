@@ -39,6 +39,12 @@ class AnchorHeadSingle(AnchorHeadTemplate):
         nn.init.normal_(self.conv_box.weight, mean=0, std=0.001)
 
     def forward(self, data_dict):
+        '''
+            return:  data_dict['batch_cls_preds'] = batch_cls_preds
+                     data_dict['batch_box_preds'] = batch_box_preds
+                     data_dict['cls_preds_normalized'] = False
+        '''
+        # [1, 512, 200, 176]
         spatial_features_2d = data_dict['spatial_features_2d']
 
         cls_preds = self.conv_cls(spatial_features_2d)
@@ -58,18 +64,20 @@ class AnchorHeadSingle(AnchorHeadTemplate):
             dir_cls_preds = None
 
         if self.training:
+            # 计算生成的anchors与gt_boxes的iou，确定anchors的labels，与gt的偏差编码和权重
             targets_dict = self.assign_targets(
                 gt_boxes=data_dict['gt_boxes']
             )
             self.forward_ret_dict.update(targets_dict)
 
         if not self.training or self.predict_boxes_when_training:
+            # 解算为类别与boxes形式
             batch_cls_preds, batch_box_preds = self.generate_predicted_boxes(
                 batch_size=data_dict['batch_size'],
                 cls_preds=cls_preds, box_preds=box_preds, dir_cls_preds=dir_cls_preds
             )
-            data_dict['batch_cls_preds'] = batch_cls_preds
-            data_dict['batch_box_preds'] = batch_box_preds
+            data_dict['batch_cls_preds'] = batch_cls_preds # [batch  anchors_num 3]
+            data_dict['batch_box_preds'] = batch_box_preds # [batch  anchors_num 7]
             data_dict['cls_preds_normalized'] = False
 
         return data_dict

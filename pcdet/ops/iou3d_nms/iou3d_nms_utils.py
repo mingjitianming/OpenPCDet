@@ -49,7 +49,7 @@ def boxes_iou3d_gpu(boxes_a, boxes_b):
     """
     Args:
         boxes_a: (N, 7) [x, y, z, dx, dy, dz, heading]
-        boxes_b: (N, 7) [x, y, z, dx, dy, dz, heading]
+        boxes_b: (M, 7) [x, y, z, dx, dy, dz, heading]
 
     Returns:
         ans_iou: (N, M)

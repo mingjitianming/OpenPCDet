@@ -32,13 +32,13 @@ DATA_CONFIG:
 MODEL:
     NAME: PVRCNN
 
-    VFE:		# voxel feature encoding
+    VFE:                  # voxel feature encoding
         NAME: MeanVFE
 
     BACKBONE_3D:
         NAME: VoxelBackBone8x
 
-    MAP_TO_BEV:
+    MAP_TO_BEV:           # 投影到2D空间
         NAME: HeightCompression
         NUM_BEV_FEATURES: 256
 

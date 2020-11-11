@@ -9,7 +9,7 @@ class ResidualCoder(object):
         self.encode_angle_by_sincos = encode_angle_by_sincos
         if self.encode_angle_by_sincos:
             self.code_size += 1
-
+    # 对gt_boxes和anchors的偏差编码
     def encode_torch(self, boxes, anchors):
         """
         Args:
@@ -42,6 +42,7 @@ class ResidualCoder(object):
         cts = [g - a for g, a in zip(cgs, cas)]
         return torch.cat([xt, yt, zt, dxt, dyt, dzt, *rts, *cts], dim=-1)
 
+    # 将编码后的偏差信息解码
     def decode_torch(self, box_encodings, anchors):
         """
         Args:

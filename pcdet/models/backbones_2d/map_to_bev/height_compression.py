@@ -7,11 +7,12 @@ class HeightCompression(nn.Module):
         self.model_cfg = model_cfg
         self.num_bev_features = self.model_cfg.NUM_BEV_FEATURES
 
+    # 将特征从3D投影到2D
     def forward(self, batch_dict):
         """
         Args:
             batch_dict:
-                encoded_spconv_tensor: sparse tensor
+                encoded_spconv_tensor: sparse tensor   #128
         Returns:
             batch_dict:
                 spatial_features:
@@ -19,8 +20,9 @@ class HeightCompression(nn.Module):
         """
         encoded_spconv_tensor = batch_dict['encoded_spconv_tensor']
         spatial_features = encoded_spconv_tensor.dense()
-        N, C, D, H, W = spatial_features.shape
+        N, C, D, H, W = spatial_features.shape   #[1,128,2,200,176]
+        # 转换到2d空间
         spatial_features = spatial_features.view(N, C * D, H, W)
-        batch_dict['spatial_features'] = spatial_features
-        batch_dict['spatial_features_stride'] = batch_dict['encoded_spconv_tensor_stride']
+        batch_dict['spatial_features'] = spatial_features    #[1,256,200,176]
+        batch_dict['spatial_features_stride'] = batch_dict['encoded_spconv_tensor_stride']   #8
         return batch_dict

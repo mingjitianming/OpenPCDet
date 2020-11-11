@@ -121,7 +121,7 @@ class VoxelBackBone8x(nn.Module):
         Args:
             batch_dict:
                 batch_size: int
-                vfe_features: (num_voxels, C)
+                vfe_features: (num_voxels, C)  [14793, 4]
                 voxel_coords: (num_voxels, 4), [batch_idx, z_idx, y_idx, x_idx]
         Returns:
             batch_dict:
@@ -135,18 +135,22 @@ class VoxelBackBone8x(nn.Module):
             spatial_shape=self.sparse_shape,
             batch_size=batch_size
         )
-
+        # feature:4 -> 16
         x = self.conv_input(input_sp_tensor)
 
+        # feature 16 -> 16
         x_conv1 = self.conv1(x)
+        # 16 -> 32
         x_conv2 = self.conv2(x_conv1)
+        # 32 -> 64
         x_conv3 = self.conv3(x_conv2)
+        # 64 -> 64
         x_conv4 = self.conv4(x_conv3)
 
         # for detection head
         # [200, 176, 5] -> [200, 176, 2]
+        # 64 -> 128
         out = self.conv_out(x_conv4)
-
         batch_dict.update({
             'encoded_spconv_tensor': out,
             'encoded_spconv_tensor_stride': 8
@@ -169,7 +173,7 @@ class VoxelResBackBone8x(nn.Module):
         self.model_cfg = model_cfg
         norm_fn = partial(nn.BatchNorm1d, eps=1e-3, momentum=0.01)
 
-        self.sparse_shape = grid_size[::-1] + [1, 0, 0]
+        self.sparse_shape = grid_size[::-1] + [1, 0, 0]    #[z,y,x,1,0,0]
 
         self.conv_input = spconv.SparseSequential(
             spconv.SubMConv3d(input_channels, 16, 3, padding=1, bias=False, indice_key='subm1'),
@@ -220,7 +224,7 @@ class VoxelResBackBone8x(nn.Module):
         Args:
             batch_dict:
                 batch_size: int
-                vfe_features: (num_voxels, C)
+                vfe_features: (num_voxels, C)  mean[x,y,z,intensity]
                 voxel_coords: (num_voxels, 4), [batch_idx, z_idx, y_idx, x_idx]
         Returns:
             batch_dict:

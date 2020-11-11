@@ -162,6 +162,7 @@ class DatasetTemplate(torch_data.Dataset):
 
         return data_dict
 
+    # 将batch_list中数据进行合并
     @staticmethod
     def collate_batch(batch_list, _unused=False):
         data_dict = defaultdict(list)
